@@ -1,47 +1,55 @@
 package com.study.studyJPA;
 
 import com.study.studyJPA.model.User;
-import com.study.studyJPA.repositories.UserRepository;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
-import java.time.LocalDate;
-import java.time.Month;
-import java.util.ArrayList;
 import java.util.List;
 
-@SpringBootTest
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-abstract class StudyJpaApplicationTests {
+public class FindUsersSortingAndPagingTests extends StudyJpaApplicationTests {
 
-	@Autowired
-	UserRepository userRepository;
+	@Test
+	void testFindAll(){
+		User user1 = userRepository.findFirstByOrderByUsernameAsc();
+		System.out.println("##: " + userRepository.findAll());
+		User user2 = userRepository.findTopByOrderByUsernameAsc();
+		Page<User> userPage = userRepository.findAll(PageRequest.of(1,3));
+		List<User> users = userRepository.findFirst2ByLevel(2, Sort.by("registrationDate"));
 
-	@BeforeAll
-	void beforeAll() {
-		userRepository.saveAll(generateUser());
+		assertAll(
+				()-> assertEquals("beth", user1.getUsername()),
+				()-> assertEquals("julius", user2.getUsername()),
+				()-> assertEquals(2, users.size()),
+				()-> assertEquals(3, userPage.getSize()),
+				()-> assertEquals("beth", users.get(0).getUsername()),
+				()-> assertEquals("marion", users.get(1).getUsername())
+		);
 	}
 
-	private static List<User> generateUser(){
-		List<User> users = new ArrayList<>();
+	@Test
+	void testFindByLevel(){
+		Sort.TypedSort<User> user = Sort.sort(User.class);
 
-		User john = new User("john", LocalDate.of(2020, Month.APRIL, 13));
-		john.setEmail("John@somedomin.com");
-		john.setLevel(1);
-
-		john.setActive(true);
-
-		users.add(john);
-
-		return users;
+		List<User> users = userRepository.findByLevel(3,
+				user.by(User::getRegistrationDate).descending());
+		assertAll(
+				() -> assertEquals(2, users.size()),
+				() -> assertEquals("james", users.get(0).getUsername())
+		);
 	}
 
-	@AfterAll
-	void afterAll(){
-		userRepository.deleteAll();
+	@Test
+	void testFindByActive(){
+		List<User> users = userRepository.findByActive(true,
+				PageRequest.of(1, 2, Sort.by("registrationDate")));
+		System.out.println("##: "+ users.toString());
+				assertAll(
+				() -> assertEquals(4, users.size()),
+				() -> assertEquals("burk", users.get(0).getUsername())
+		);
 	}
+
 }
